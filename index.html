@@ -1,10 +1,14 @@
 <!DOCTYPE html>
-<html lang="id" data-theme="light">
+<html lang="id" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="theme-color" content="#4F46E5">
-    <title>Ultimate Bulk Image Resizer & PDF Builder 2.0</title>
+    <title>Image Resizer</title>
+    
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
@@ -31,10 +35,15 @@
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; transition: background-color 0.2s, color 0.2s, border-color 0.2s; }
         body { background-color: var(--bg-color); color: var(--text-main); display: flex; flex-direction: column; align-items: center; min-height: 100vh; padding: 2rem 1rem; }
 
-        .header-wrapper { display: flex; justify-content: flex-end; width: 100%; max-width: 850px; margin-bottom: -1rem; z-index: 10; }
-        .theme-toggle { background: var(--card-bg); border: 1px solid var(--border-color); color: var(--text-main); padding: 0.5rem 1rem; border-radius: 8px; cursor: pointer; font-weight: 600; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        /* PERBAIKAN SPASI DI SINI: gap ditambahkan dan margin-bottom diubah ke 1rem */
+        .header-wrapper { display: flex; justify-content: flex-end; gap: 0.8rem; width: 100%; max-width: 850px; margin-bottom: 1rem; z-index: 10; }
+        
+        .header-btn { background: var(--card-bg); border: 1px solid var(--border-color); color: var(--text-main); padding: 0.5rem 1rem; border-radius: 8px; cursor: pointer; font-weight: 600; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .header-btn:hover { filter: brightness(0.9); }
+        .btn-install { background-color: var(--primary); color: white; border-color: var(--primary); }
+        .btn-update { background-color: var(--warning); color: #000; border-color: var(--warning); }
 
-        .container { background: var(--card-bg); max-width: 850px; width: 100%; border-radius: 16px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08); padding: 2.5rem; margin-top: 1rem; position: relative; }
+        .container { background: var(--card-bg); max-width: 850px; width: 100%; border-radius: 16px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08); padding: 2.5rem; position: relative; }
 
         h1 { text-align: center; font-size: 2.2rem; margin-bottom: 0.5rem; background: linear-gradient(135deg, var(--primary), #8B5CF6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         p.subtitle { text-align: center; color: var(--text-muted); margin-bottom: 2rem; font-size: 0.95rem; }
@@ -61,6 +70,7 @@
         .icon-btn:hover { transform: scale(1.1); }
         .btn-remove { background: var(--danger); } 
         .btn-preview { background: var(--info); } 
+        .btn-dl { background: var(--success); } /* CSS untuk tombol Single Download */
 
         /* Accordion Settings */
         .settings-container { margin-top: 1.5rem; border: 1px solid var(--border-color); border-radius: 10px; overflow: hidden; }
@@ -125,11 +135,13 @@
 <body>
 
     <div class="header-wrapper">
-        <button class="theme-toggle" id="theme-toggle">🌙 Dark Mode</button>
+        <button id="btnUpdate" class="header-btn btn-update" style="display: none;">🔄 Update App</button>
+        <button id="btnInstall" class="header-btn btn-install" style="display: none;">📲 Install App</button>
+        <button id="theme-toggle" class="header-btn">🌙 Dark Mode</button>
     </div>
 
     <div class="container">
-        <h1>Ultimate Resizer 2.0</h1>
+        <h1>Image Resizer v2.0.1</h1>
         <p class="subtitle">Image Converter, Color Enhancer, & Smart PDF Builder</p>
 
         <div class="dropzone" id="dropzone">
@@ -241,7 +253,51 @@
     <div class="version-tag">v2.0 Ultimate Edition</div>
 
     <script>
-        // Accordion
+        // === PWA & Service Worker Logic ===
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            document.getElementById('btnInstall').style.display = 'inline-block';
+        });
+
+        document.getElementById('btnInstall').addEventListener('click', async () => {
+            if (deferredPrompt !== null) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                if (outcome === 'accepted') {
+                    deferredPrompt = null;
+                    document.getElementById('btnInstall').style.display = 'none';
+                }
+            }
+        });
+
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js').then(reg => {
+                    reg.addEventListener('updatefound', () => {
+                        const newWorker = reg.installing;
+                        newWorker.addEventListener('statechange', () => {
+                            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                document.getElementById('btnUpdate').style.display = 'inline-block';
+                                document.getElementById('btnUpdate').addEventListener('click', () => {
+                                    newWorker.postMessage({ action: 'skipWaiting' });
+                                });
+                            }
+                        });
+                    });
+                }).catch(err => console.log('SW Registration failed: ', err));
+                
+                let refreshing;
+                navigator.serviceWorker.addEventListener('controllerchange', () => {
+                    if (refreshing) return;
+                    window.location.reload();
+                    refreshing = true;
+                });
+            });
+        }
+
+        // === Accordion & Theme Logic ===
         function toggleAccordion(element) {
             const content = element.nextElementSibling; const isActive = element.classList.contains('active');
             document.querySelectorAll('.accordion-header').forEach(h => h.classList.remove('active'));
@@ -249,12 +305,11 @@
             if (!isActive) { element.classList.add('active'); content.classList.add('active'); }
         }
 
-        // Theme
-        const htmlEl = document.documentElement; htmlEl.setAttribute('data-theme', localStorage.getItem('theme') || 'light');
+        const htmlEl = document.documentElement; htmlEl.setAttribute('data-theme', localStorage.getItem('theme') || 'dark');
         document.getElementById('theme-toggle').textContent = htmlEl.getAttribute('data-theme') === 'dark' ? '☀️ Light Mode' : '🌙 Dark Mode';
         document.getElementById('theme-toggle').addEventListener('click', () => { const nt = htmlEl.getAttribute('data-theme') === 'light' ? 'dark' : 'light'; htmlEl.setAttribute('data-theme', nt); localStorage.setItem('theme', nt); document.getElementById('theme-toggle').textContent = nt === 'dark' ? '☀️ Light Mode' : '🌙 Dark Mode'; });
 
-        // Inputs Observers
+        // === Input Observers ===
         window.setRes = function(w, h, m) { document.getElementById('width').value=w; document.getElementById('height').value=h; document.getElementById('resize-mode').value=m; document.querySelectorAll('.accordion-header')[1].click(); };
         document.getElementById('quality').addEventListener('input', e => document.getElementById('quality-val').textContent = `${e.target.value}%`);
         document.getElementById('wm-logo-scale').addEventListener('input', e => document.getElementById('scale-val').textContent = `${e.target.value}%`);
@@ -267,7 +322,7 @@
         
         let loadedLogoImage = null; document.getElementById('watermark-logo-input').addEventListener('change', e => { if (e.target.files[0]) { const img = new Image(); img.onload = () => loadedLogoImage = img; img.src = URL.createObjectURL(e.target.files[0]); } });
 
-        // Presets Logic (v2)
+        // === Presets Logic ===
         const presetSel = document.getElementById('preset-selector');
         const inputIdsToSave = ['resize-mode', 'format', 'width', 'height', 'quality', 'bg-color', 'image-filter', 'adj-bright', 'adj-contrast', 'adj-saturate', 'naming-mode', 'prefix', 'watermark-type', 'watermark-text', 'watermark-color', 'watermark-size', 'wm-logo-scale', 'wm-logo-opacity', 'watermark-pos'];
         function loadPresets() { const saved = JSON.parse(localStorage.getItem('resizer_presets_ultimate')) || {}; presetSel.innerHTML = '<option value="default">-- Bawaan Aplikasi --</option>'; for (const key in saved) { const opt = document.createElement('option'); opt.value = key; opt.textContent = key; presetSel.appendChild(opt); } }
@@ -276,7 +331,7 @@
         presetSel.addEventListener('change', e => { const name = e.target.value; if (name === 'default') return; const saved = JSON.parse(localStorage.getItem('resizer_presets_ultimate')) || {}; if (saved[name]) { inputIdsToSave.forEach(id => { const el = document.getElementById(id); if (el && saved[name][id] !== undefined) { el.value = saved[name][id]; el.dispatchEvent(new Event('input')); el.dispatchEvent(new Event('change')); } }); } });
         loadPresets();
 
-        // Drag & Drop Gallery
+        // === Drag & Drop Gallery ===
         const dropzone = document.getElementById('dropzone'), fileInput = document.getElementById('file-input'), previewGallery = document.getElementById('preview-gallery');
         let selectedFiles = []; let totalOrigSize = 0; let draggedIndex = null;
         
@@ -290,7 +345,7 @@
         function renderGallery() {
             previewGallery.innerHTML = ''; totalOrigSize = 0; 
             const btnZ = document.getElementById('btn-dl-zip'); const btnP = document.getElementById('btn-dl-pdf'); document.getElementById('stats-box').style.display = 'none';
-            if (selectedFiles.length === 0) { document.getElementById('file-count').textContent = `Belum ada gambar`; btnZ.disabled = true; btnP.disabled = true; previewGallery.innerHTML = `<p style="grid-column:1/-1; text-align:center; color:var(--text-muted); padding:2rem 0;">Galeri Pratinjau kosong.</p>`; return; }
+            if (selectedFiles.length === 0) { document.getElementById('file-count').textContent = `Belum ada gambar`; btnZ.disabled = true; btnP.disabled = true; previewGallery.innerHTML = `<p style="grid-column:1/-1; text-align:center; color:var(--text-muted); padding:2rem 0;">Galeri Pratinjau kosong. Tahan dan geser (Drag & Drop) untuk mengatur urutan file.</p>`; return; }
             document.getElementById('file-count').textContent = `${selectedFiles.length} file siap diproses`; btnZ.disabled = false; btnP.disabled = false;
             
             selectedFiles.forEach((file, index) => {
@@ -303,10 +358,12 @@
                 card.addEventListener('dragleave', () => card.classList.remove('drag-over'));
                 card.addEventListener('drop', e => { e.preventDefault(); card.classList.remove('drag-over'); const dropIndex = index; if (draggedIndex === dropIndex || draggedIndex === null) return; const moved = selectedFiles.splice(draggedIndex, 1)[0]; selectedFiles.splice(dropIndex, 0, moved); renderGallery(); });
 
+                // Tombol Single Download ditambahkan di sini
                 card.innerHTML = `
                     <div class="drag-handle-badge">#${index+1} ✥</div>
                     <div class="action-btns">
                         <button class="icon-btn btn-preview" onclick="openLivePreview(${index})" title="Preview Final">👁️</button>
+                        <button class="icon-btn btn-dl" onclick="downloadSingle(${index})" title="Unduh File Ini">⬇️</button>
                         <button class="icon-btn btn-remove" onclick="removeFile(${index})" title="Hapus">×</button>
                     </div>
                     <img src="${objUrl}" alt="preview" onload="URL.revokeObjectURL(this.src)">
@@ -316,7 +373,7 @@
             });
         }
 
-        // Processing Engine (Outputs Blob AND Base64 DataURL for PDF)
+        // === Processing Engine ===
         function processImage(file, index, maxW, maxH, mode, format, q) {
             return new Promise((resolve) => {
                 const img = new Image();
@@ -337,7 +394,6 @@
                     
                     ctx.drawImage(img, sX, sY, sW, sH, dX, dY, dW, dH); ctx.filter = 'none';
 
-                    // Watermark Application
                     const wmType = document.getElementById('watermark-type').value, wmPos = document.getElementById('watermark-pos').value;
                     if (wmType === 'text') {
                         const wmT = document.getElementById('watermark-text').value.trim();
@@ -357,8 +413,7 @@
                     const finalMime = format === 'original' ? file.type : format; let ext = '.jpg'; if (finalMime === 'image/png') ext = '.png'; if (finalMime === 'image/webp') ext = '.webp';
                     const pre = document.getElementById('prefix').value; let nName = document.getElementById('naming-mode').value === 'sequence' ? `${pre}${index + 1}${ext}` : `${pre}${file.name.replace(/\.[^/.]+$/, "")}${ext}`;
                     
-                    // Return both Blob (for ZIP) and DataURL (for PDF generation)
-                    const dataUrl = canvas.toDataURL(finalMime === 'image/webp' ? 'image/jpeg' : finalMime, q); // jsPDF loves JPEG/PNG
+                    const dataUrl = canvas.toDataURL(finalMime === 'image/webp' ? 'image/jpeg' : finalMime, q);
                     canvas.toBlob(blob => resolve({ name: nName, blob: blob, dataUrl: dataUrl, width: destW, height: destH, mime: finalMime }), finalMime, q); 
                     URL.revokeObjectURL(img.src);
                 };
@@ -366,7 +421,14 @@
             });
         }
 
-        // Live Preview Modal
+        // === Single Download Logic ===
+        window.downloadSingle = async function(i) {
+            const w=parseInt(document.getElementById('width').value), h=parseInt(document.getElementById('height').value), m=document.getElementById('resize-mode').value, f=document.getElementById('format').value, q=parseInt(document.getElementById('quality').value)/100;
+            const res = await processImage(selectedFiles[i], i, w, h, m, f, q);
+            saveAs(res.blob, res.name);
+        };
+
+        // === Live Preview Modal ===
         const modal = document.getElementById('preview-modal'); const modalImg = document.getElementById('modal-image');
         window.openLivePreview = async function(i) {
             modalImg.style.display = 'none'; document.getElementById('preview-loading').style.display = 'block'; modal.classList.add('active');
@@ -377,11 +439,10 @@
         window.closeModal = function() { modal.classList.remove('active'); setTimeout(() => modalImg.src = '', 300); };
         modal.addEventListener('click', e => { if(e.target === modal) closeModal(); });
 
-        // Core UI Lock function
+        // === Batch Core ===
         function lockUI() { document.getElementById('btn-dl-zip').disabled = true; document.getElementById('btn-dl-pdf').disabled = true; document.getElementById('progress-wrapper').style.display = 'block'; document.getElementById('progress-bar').style.width = '0%'; document.getElementById('status').style.color = 'var(--primary)'; }
         function unlockUI() { document.getElementById('btn-dl-zip').disabled = false; document.getElementById('btn-dl-pdf').disabled = false; setTimeout(() => document.getElementById('progress-wrapper').style.display = 'none', 2000); }
 
-        // EXPORT TO ZIP
         document.getElementById('btn-dl-zip').addEventListener('click', async () => {
             const maxW=parseInt(document.getElementById('width').value), maxH=parseInt(document.getElementById('height').value);
             let outName = document.getElementById('output-filename').value.trim() || "hasil_ultimate_v2";
@@ -395,7 +456,7 @@
             for (let i = 0; i < selectedFiles.length; i++) {
                 statusDiv.textContent = `Memproses ZIP (${i + 1}/${selectedFiles.length}): ${selectedFiles[i].name}`;
                 progBar.style.width = `${((i) / selectedFiles.length) * 100}%`;
-                await new Promise(res => setTimeout(res, 10)); // Anti-freeze
+                await new Promise(res => setTimeout(res, 10)); 
                 const result = await processImage(selectedFiles[i], i, maxW, maxH, mode, format, q);
                 totalNewSize += result.blob.size; imgFolder.file(result.name, result.blob);
             }
@@ -403,12 +464,10 @@
             progBar.style.width = `100%`; statusDiv.textContent = "Membangun arsip ZIP...";
             zip.generateAsync({ type: "blob" }).then(content => {
                 saveAs(content, `${outName}.zip`);
-                statusDiv.textContent = "Unduhan ZIP Selesai! 🎉"; statusDiv.style.color = "var(--success)"; unlockUI();
-                showStats(totalNewSize);
+                statusDiv.textContent = "Unduhan ZIP Selesai! 🎉"; statusDiv.style.color = "var(--success)"; unlockUI(); showStats(totalNewSize);
             });
         });
 
-        // EXPORT TO SMART PDF
         document.getElementById('btn-dl-pdf').addEventListener('click', async () => {
             if (!window.jspdf) return alert("Gagal memuat sistem PDF. Pastikan internet Anda aktif.");
             const maxW=parseInt(document.getElementById('width').value), maxH=parseInt(document.getElementById('height').value);
@@ -416,13 +475,9 @@
             if (document.getElementById('watermark-type').value === 'image' && !loadedLogoImage) return alert("Pilih Logo Watermark dahulu.");
 
             lockUI(); const statusDiv = document.getElementById('status'), progBar = document.getElementById('progress-bar');
-            const { jsPDF } = window.jspdf; 
-            const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-            
-            // A4 dimensions in mm
-            const a4W = 210, a4H = 297;
-            const mode=document.getElementById('resize-mode').value, format=document.getElementById('format').value, q=parseInt(document.getElementById('quality').value)/100;
-            let totalNewSize = 0; // Estimation
+            const { jsPDF } = window.jspdf; const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+            const a4W = 210, a4H = 297; const mode=document.getElementById('resize-mode').value, format=document.getElementById('format').value, q=parseInt(document.getElementById('quality').value)/100;
+            let totalNewSize = 0; 
 
             for (let i = 0; i < selectedFiles.length; i++) {
                 statusDiv.textContent = `Merender Halaman PDF (${i + 1}/${selectedFiles.length})...`;
@@ -430,19 +485,13 @@
                 await new Promise(res => setTimeout(res, 10)); 
                 
                 const result = await processImage(selectedFiles[i], i, maxW, maxH, mode, format, q);
-                totalNewSize += result.blob.size; // Estimate
+                totalNewSize += result.blob.size; 
                 
-                // Smart A4 Fit Calculation
-                const imgRatio = result.width / result.height;
-                const a4Ratio = a4W / a4H;
-                let finalW = a4W, finalH = a4H;
-                
+                const imgRatio = result.width / result.height; const a4Ratio = a4W / a4H; let finalW = a4W, finalH = a4H;
                 if (imgRatio > a4Ratio) { finalH = a4W / imgRatio; } else { finalW = a4H * imgRatio; }
                 const xOffset = (a4W - finalW) / 2; const yOffset = (a4H - finalH) / 2;
 
                 if (i > 0) doc.addPage();
-                
-                // Add image (jsPDF requires format 'JPEG' or 'PNG')
                 let pdfImgFormat = result.mime === 'image/png' ? 'PNG' : 'JPEG';
                 doc.addImage(result.dataUrl, pdfImgFormat, xOffset, yOffset, finalW, finalH, undefined, 'FAST');
             }
@@ -450,8 +499,7 @@
             progBar.style.width = `100%`; statusDiv.textContent = "Menyatukan Dokumen PDF...";
             setTimeout(() => {
                 doc.save(`${outName}.pdf`);
-                statusDiv.textContent = "Dokumen PDF Berhasil Dibuat! 📕"; statusDiv.style.color = "var(--danger)"; unlockUI();
-                showStats(totalNewSize);
+                statusDiv.textContent = "Dokumen PDF Berhasil Dibuat! 📕"; statusDiv.style.color = "var(--danger)"; unlockUI(); showStats(totalNewSize);
             }, 500);
         });
 
