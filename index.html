@@ -2,12 +2,14 @@
 <html lang="id" data-theme="light">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Modern Bulk Image Resizer Max</title>
-    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#4F46E5">
+    <title>Ultimate Bulk Image Resizer & PDF Builder 2.0</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
     <style>
         :root {
@@ -20,56 +22,68 @@
         }
 
         [data-theme="dark"] {
-            --bg-color: #111827; --card-bg: #1F2937;
-            --text-main: #F9FAFB; --text-muted: #9CA3AF;
-            --border-color: #374151; --input-bg: #374151;
-            --gallery-bg: #111827;
+            --bg-color: #0F172A; --card-bg: #1E293B;
+            --text-main: #F8FAFC; --text-muted: #94A3B8;
+            --border-color: #334155; --input-bg: #334155;
+            --gallery-bg: #0F172A;
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; transition: background-color 0.2s, color 0.2s, border-color 0.2s; }
-
         body { background-color: var(--bg-color); color: var(--text-main); display: flex; flex-direction: column; align-items: center; min-height: 100vh; padding: 2rem 1rem; }
 
         .header-wrapper { display: flex; justify-content: flex-end; width: 100%; max-width: 850px; margin-bottom: -1rem; z-index: 10; }
-        .theme-toggle { background: var(--card-bg); border: 1px solid var(--border-color); color: var(--text-main); padding: 0.5rem 1rem; border-radius: 8px; cursor: pointer; font-weight: 500; }
+        .theme-toggle { background: var(--card-bg); border: 1px solid var(--border-color); color: var(--text-main); padding: 0.5rem 1rem; border-radius: 8px; cursor: pointer; font-weight: 600; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
 
-        .container { background: var(--card-bg); max-width: 850px; width: 100%; border-radius: 16px; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05); padding: 2.5rem; margin-top: 1rem; position: relative; }
+        .container { background: var(--card-bg); max-width: 850px; width: 100%; border-radius: 16px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08); padding: 2.5rem; margin-top: 1rem; position: relative; }
 
-        h1 { text-align: center; font-size: 2rem; margin-bottom: 0.5rem; }
+        h1 { text-align: center; font-size: 2.2rem; margin-bottom: 0.5rem; background: linear-gradient(135deg, var(--primary), #8B5CF6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         p.subtitle { text-align: center; color: var(--text-muted); margin-bottom: 2rem; font-size: 0.95rem; }
 
-        /* Dropzone & Gallery */
-        .dropzone { border: 2px dashed var(--primary); border-radius: 12px; padding: 2rem; text-align: center; background: rgba(79, 70, 229, 0.03); cursor: pointer; position: relative; }
-        .dropzone.dragover { border-color: var(--primary-hover); background: rgba(79, 70, 229, 0.12); }
+        /* Dropzone & Sortable Gallery */
+        .dropzone { border: 2px dashed var(--primary); border-radius: 12px; padding: 2.5rem 2rem; text-align: center; background: rgba(79, 70, 229, 0.03); cursor: pointer; position: relative; transition: all 0.2s; }
+        .dropzone.dragover { border-color: var(--primary-hover); background: rgba(79, 70, 229, 0.12); transform: scale(1.01); }
         .dropzone input[type="file"] { position: absolute; width: 100%; height: 100%; top: 0; left: 0; opacity: 0; cursor: pointer; }
-        .dropzone-text { font-weight: 600; color: var(--primary); font-size: 1.1rem; }
-        #file-count { display: block; margin-top: 0.5rem; color: var(--text-muted); font-size: 0.9rem; }
+        .dropzone-text { font-weight: 700; color: var(--primary); font-size: 1.2rem; display: block; margin-bottom: 0.3rem;}
+        #file-count { display: block; color: var(--text-muted); font-size: 0.9rem; }
 
-        .preview-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 1rem; margin-top: 1rem; max-height: 240px; overflow-y: auto; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 10px; background: var(--gallery-bg); }
-        .preview-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 0.35rem; display: flex; flex-direction: column; align-items: center; position: relative; transition: transform 0.2s; }
-        .preview-card:hover { transform: translateY(-3px); box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        .preview-card img { width: 100%; height: 75px; object-fit: cover; border-radius: 6px; }
-        .preview-card .file-name { font-size: 0.65rem; color: var(--text-muted); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; margin-top: 0.4rem; }
+        .preview-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 1rem; margin-top: 1rem; max-height: 280px; overflow-y: auto; padding: 1rem; border: 1px solid var(--border-color); border-radius: 10px; background: var(--gallery-bg); }
+        .preview-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 0.35rem; display: flex; flex-direction: column; align-items: center; position: relative; transition: transform 0.2s, box-shadow 0.2s; cursor: grab; }
+        .preview-card:active { cursor: grabbing; }
+        .preview-card.dragging { opacity: 0.4; transform: scale(0.95); }
+        .preview-card.drag-over { border: 2px dashed var(--primary); }
+        .preview-card:hover { transform: translateY(-4px); box-shadow: 0 6px 12px rgba(0,0,0,0.1); }
+        .preview-card img { width: 100%; height: 75px; object-fit: cover; border-radius: 6px; pointer-events: none; }
+        .preview-card .file-name { font-size: 0.65rem; color: var(--text-muted); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; margin-top: 0.4rem; pointer-events: none; }
+        .drag-handle-badge { position: absolute; top: 4px; left: 4px; background: rgba(0,0,0,0.6); color: white; border-radius: 4px; padding: 2px 6px; font-size: 0.6rem; z-index: 2; pointer-events: none; font-weight: bold; }
         
-        .action-btns { position: absolute; top: -8px; right: -8px; display: flex; gap: 0.2rem; }
-        .icon-btn { color: white; border: none; border-radius: 50%; width: 24px; height: 24px; font-size: 12px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
-        .btn-remove { background: var(--danger); } .btn-remove:hover { background: #DC2626; }
-        .btn-preview { background: var(--info); } .btn-preview:hover { background: #2563EB; }
-        .btn-dl { background: var(--success); } .btn-dl:hover { background: #059669; }
+        .action-btns { position: absolute; top: -10px; right: -10px; display: flex; gap: 0.3rem; }
+        .icon-btn { color: white; border: none; border-radius: 50%; width: 26px; height: 26px; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.2); transition: transform 0.1s;}
+        .icon-btn:hover { transform: scale(1.1); }
+        .btn-remove { background: var(--danger); } 
+        .btn-preview { background: var(--info); } 
 
-        /* Settings */
-        .section-title { grid-column: span 2; font-size: 1rem; font-weight: 700; margin-top: 1rem; padding-bottom: 0.4rem; border-bottom: 2px solid var(--border-color); color: var(--primary); display: flex; justify-content: space-between; align-items: center; }
-        .settings { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem; margin-top: 1rem; padding-top: 1rem; }
+        /* Accordion Settings */
+        .settings-container { margin-top: 1.5rem; border: 1px solid var(--border-color); border-radius: 10px; overflow: hidden; }
+        .accordion-header { background: var(--gallery-bg); padding: 1.2rem 1.5rem; display: flex; justify-content: space-between; align-items: center; cursor: pointer; font-weight: 600; color: var(--primary); border-bottom: 1px solid var(--border-color); user-select: none; }
+        .accordion-header:hover { background: var(--border-color); }
+        .accordion-header.active { border-bottom: none; background: rgba(79, 70, 229, 0.05); }
+        .accordion-icon { font-size: 0.8rem; transition: transform 0.3s; }
+        .accordion-header.active .accordion-icon { transform: rotate(180deg); }
+        
+        .accordion-content { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem; padding: 0 1.5rem; max-height: 0; overflow: hidden; opacity: 0; transition: all 0.3s ease; background: var(--card-bg); }
+        .accordion-content.active { max-height: 800px; padding: 1.5rem; opacity: 1; border-bottom: 1px solid var(--border-color); }
+
         .input-group { display: flex; flex-direction: column; gap: 0.5rem; }
         .input-group label { font-size: 0.85rem; font-weight: 600; }
-        .input-group input, .input-group select { padding: 0.7rem; border: 1px solid var(--border-color); background-color: var(--input-bg); color: var(--text-main); border-radius: 8px; font-size: 0.95rem; outline: none; }
-        .input-group input:focus, .input-group select:focus { border-color: var(--primary); }
+        .input-group input, .input-group select { padding: 0.75rem; border: 1px solid var(--border-color); background-color: var(--input-bg); color: var(--text-main); border-radius: 8px; font-size: 0.95rem; outline: none; }
+        .input-group input:focus, .input-group select:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1); }
         .color-size-picker { display: flex; gap: 0.5rem; align-items: center; }
-        .color-size-picker input[type="color"] { border: 1px solid var(--border-color); background: none; width: 50px; height: 38px; padding: 2px; border-radius: 6px; cursor: pointer; }
-        .slider-label { display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--text-muted); }
+        .color-size-picker input[type="color"] { border: 1px solid var(--border-color); background: none; width: 50px; height: 40px; padding: 2px; border-radius: 6px; cursor: pointer; }
+        .slider-label { display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--text-muted); margin-top: -0.2rem;}
         .hidden { display: none !important; }
+        .full-width { grid-column: span 2; }
 
-        .btn-small { padding: 0.4rem 0.8rem; font-size: 0.8rem; border-radius: 6px; border: none; cursor: pointer; font-weight: 600; background: var(--border-color); color: var(--text-main); }
+        .btn-small { padding: 0.5rem 0.8rem; font-size: 0.8rem; border-radius: 6px; border: none; cursor: pointer; font-weight: 600; background: var(--border-color); color: var(--text-main); }
         .btn-small:hover { filter: brightness(0.9); }
         .preset-controls { display: flex; gap: 0.5rem; }
         .btn-save { background: var(--success); color: white; }
@@ -77,30 +91,35 @@
         .quick-sizes { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.5rem; }
         .quick-sizes .btn-small { background: var(--info); color: white; }
 
-        /* Action & Progress */
-        .action-area { display: grid; grid-template-columns: 2fr 1fr; gap: 1rem; margin-top: 2rem; align-items: end; }
-        .btn-primary { background-color: var(--primary); color: white; border: none; border-radius: 8px; padding: 1rem; font-size: 1rem; font-weight: 600; width: 100%; cursor: pointer; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.2); }
-        .btn-primary:hover:not(:disabled) { background-color: var(--primary-hover); }
-        .btn-primary:disabled { background-color: var(--text-muted); cursor: not-allowed; opacity: 0.6; box-shadow: none; }
+        /* Action Area Dual Output */
+        .action-area { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 2rem; align-items: end; background: var(--gallery-bg); padding: 1.5rem; border-radius: 12px; border: 1px solid var(--border-color);}
+        .dual-buttons { display: flex; gap: 0.8rem; width: 100%; grid-column: span 2;}
+        .btn-primary { flex: 1; color: white; border: none; border-radius: 8px; padding: 1rem; font-size: 1rem; font-weight: 600; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.15); transition: transform 0.1s, filter 0.2s; }
+        .btn-primary:hover:not(:disabled) { transform: translateY(-2px); filter: brightness(1.1); }
+        .btn-primary:active:not(:disabled) { transform: translateY(0); }
+        .btn-primary:disabled { background-color: var(--text-muted) !important; cursor: not-allowed; opacity: 0.6; box-shadow: none; transform: none; }
         
-        #status { margin-top: 0.5rem; text-align: center; font-weight: 600; color: var(--primary); font-size: 0.9rem; }
-        .progress-wrapper { width: 100%; background: var(--border-color); border-radius: 8px; height: 12px; margin-top: 1rem; overflow: hidden; display: none; }
-        .progress-fill { height: 100%; background: var(--primary); width: 0%; transition: width 0.1s linear; }
+        .btn-zip { background-color: var(--primary); }
+        .btn-pdf { background-color: var(--danger); }
+        
+        #status { margin-top: 1rem; text-align: center; font-weight: 600; color: var(--primary); font-size: 0.95rem; }
+        .progress-wrapper { width: 100%; background: var(--border-color); border-radius: 8px; height: 14px; margin-top: 1rem; overflow: hidden; display: none; box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);}
+        .progress-fill { height: 100%; background: linear-gradient(90deg, var(--primary), #8B5CF6); width: 0%; transition: width 0.1s linear; }
         
         .stats-box { margin-top: 1rem; padding: 1rem; border-radius: 8px; background: rgba(16, 185, 129, 0.1); border: 1px solid var(--success); color: var(--text-main); font-size: 0.9rem; text-align: center; display: none; }
         .stats-box span { font-weight: 700; color: var(--success); }
-        .version-tag { position: fixed; bottom: 1rem; right: 1rem; background: var(--card-bg); padding: 0.3rem 0.6rem; border-radius: 6px; font-size: 0.8rem; color: var(--text-muted); border: 1px solid var(--border-color); z-index: 100;}
+        .version-tag { position: fixed; bottom: 1rem; right: 1rem; background: var(--card-bg); padding: 0.4rem 0.8rem; border-radius: 8px; font-size: 0.8rem; font-weight: 600; color: var(--primary); border: 1px solid var(--border-color); z-index: 100; box-shadow: 0 2px 10px rgba(0,0,0,0.05);}
         
         /* Modal */
-        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: flex; justify-content: center; align-items: center; z-index: 1000; opacity: 0; pointer-events: none; transition: opacity 0.3s; backdrop-filter: blur(4px); }
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; justify-content: center; align-items: center; z-index: 1000; opacity: 0; pointer-events: none; transition: opacity 0.3s; backdrop-filter: blur(5px); }
         .modal-overlay.active { opacity: 1; pointer-events: auto; }
-        .modal-content { background: var(--card-bg); padding: 1.5rem; border-radius: 12px; max-width: 90%; max-height: 90vh; display: flex; flex-direction: column; align-items: center; position: relative; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); }
-        .modal-close { position: absolute; top: -15px; right: -15px; background: var(--danger); color: white; border: none; width: 35px; height: 35px; border-radius: 50%; font-size: 1.2rem; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1); font-weight: bold; }
-        .modal-content img { max-width: 100%; max-height: 70vh; object-fit: contain; border-radius: 8px; border: 1px solid var(--border-color); background: #eee; }
-        .modal-title { font-weight: 600; margin-bottom: 1rem; font-size: 1.1rem; color: var(--primary); }
+        .modal-content { background: var(--card-bg); padding: 1.5rem; border-radius: 12px; max-width: 95%; max-height: 95vh; display: flex; flex-direction: column; align-items: center; position: relative; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); }
+        .modal-close { position: absolute; top: -15px; right: -15px; background: var(--text-main); color: var(--card-bg); border: none; width: 35px; height: 35px; border-radius: 50%; font-size: 1.2rem; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1); font-weight: bold; transition: transform 0.2s;}
+        .modal-close:hover { transform: rotate(90deg); }
+        .modal-content img { max-width: 100%; max-height: 75vh; object-fit: contain; border-radius: 8px; background: #eee; }
         #preview-loading { position: absolute; font-weight: bold; color: var(--primary); display: none; }
 
-        @media (max-width: 600px) { .settings, .action-area { grid-template-columns: 1fr; } .section-title { grid-column: span 1; flex-direction: column; align-items: flex-start; gap: 0.5rem;} .input-group.full-width { grid-column: span 1 !important; } }
+        @media (max-width: 600px) { .accordion-content { grid-template-columns: 1fr; } .full-width { grid-column: span 1 !important; } .dual-buttons { flex-direction: column; } .action-area { grid-template-columns: 1fr; } }
     </style>
 </head>
 <body>
@@ -110,8 +129,8 @@
     </div>
 
     <div class="container">
-        <h1>Bulk Image Resizer Max</h1>
-        <p class="subtitle">Anti-Lag Asynchronous Processing, Progress Bar, & Preset Medsos.</p>
+        <h1>Ultimate Resizer 2.0</h1>
+        <p class="subtitle">Image Converter, Color Enhancer, & Smart PDF Builder</p>
 
         <div class="dropzone" id="dropzone">
             <span class="dropzone-text">Klik atau Tarik Gambar ke Sini</span>
@@ -120,57 +139,97 @@
         </div>
 
         <div class="preview-gallery" id="preview-gallery">
-            <p style="grid-column: 1/-1; text-align:center; color:var(--text-muted); font-size:0.9rem; padding: 1.5rem 0;">Galeri Pratinjau akan muncul di sini.</p>
+            <p style="grid-column: 1/-1; text-align:center; color:var(--text-muted); font-size:0.9rem; padding: 2rem 0;">Galeri Pratinjau kosong. Tahan dan geser (Drag & Drop) untuk mengatur urutan file.</p>
         </div>
 
-        <div class="settings">
-            <div class="section-title">
-                <span>💾 Manajemen Profil</span>
-                <div class="preset-controls">
-                    <button class="btn-small btn-save" id="btn-save-preset">+ Simpan</button>
-                    <button class="btn-small btn-delete" id="btn-delete-preset">Hapus</button>
+        <div class="settings-container">
+            <div class="accordion-header active" onclick="toggleAccordion(this)">
+                <span>💾 Profil & Pengaturan Tersimpan</span><span class="accordion-icon">▼</span>
+            </div>
+            <div class="accordion-content active">
+                <div class="input-group full-width" style="flex-direction:row; justify-content:space-between; align-items:flex-end;">
+                    <div style="flex-grow:1; margin-right: 1rem;">
+                        <label>Muat Profil</label>
+                        <select id="preset-selector"><option value="default">-- Bawaan Aplikasi --</option></select>
+                    </div>
+                    <div class="preset-controls">
+                        <button class="btn-small btn-save" id="btn-save-preset">+ Simpan</button>
+                        <button class="btn-small btn-delete" id="btn-delete-preset">Hapus</button>
+                    </div>
                 </div>
             </div>
-            <div class="input-group full-width" style="grid-column: span 2;">
-                <select id="preset-selector"><option value="default">-- Pengaturan Bawaan --</option></select>
-            </div>
 
-            <div class="section-title">📐 Geometri & Resolusi Target</div>
-            <div class="input-group full-width" style="grid-column: span 2;">
-                <label>Pintasan Resolusi (Media Sosial)</label>
-                <div class="quick-sizes">
-                    <button class="btn-small" onclick="document.getElementById('width').value=1080; document.getElementById('height').value=1080; document.getElementById('resize-mode').value='pad';">IG Square (1:1)</button>
-                    <button class="btn-small" onclick="document.getElementById('width').value=1080; document.getElementById('height').value=1920; document.getElementById('resize-mode').value='pad';">IG Story / TikTok</button>
-                    <button class="btn-small" onclick="document.getElementById('width').value=1920; document.getElementById('height').value=1080; document.getElementById('resize-mode').value='pad';">YouTube FHD</button>
+            <div class="accordion-header" onclick="toggleAccordion(this)">
+                <span>📐 Resolusi & Geometri</span><span class="accordion-icon">▼</span>
+            </div>
+            <div class="accordion-content">
+                <div class="input-group full-width">
+                    <label>Pintasan Resolusi Cepat</label>
+                    <div class="quick-sizes">
+                        <button class="btn-small" onclick="setRes(1080,1080,'pad')">IG Square (1:1)</button>
+                        <button class="btn-small" onclick="setRes(1080,1920,'pad')">IG Story/TikTok</button>
+                        <button class="btn-small" onclick="setRes(1920,1080,'pad')">YouTube FHD</button>
+                        <button class="btn-small" onclick="setRes(2480,3508,'fit')">Kertas A4 (300dpi)</button>
+                    </div>
                 </div>
+                <div class="input-group"><label>Lebar (px)</label><input type="number" id="width" value="1080"></div>
+                <div class="input-group"><label>Tinggi (px)</label><input type="number" id="height" value="1080"></div>
+                <div class="input-group"><label>Mode Potong / Fit</label><select id="resize-mode"><option value="fit">Fit (Proporsional)</option><option value="crop-square">Crop Square</option><option value="pad">Pad (Tambah Bingkai)</option><option value="stretch">Stretch (Tarik)</option></select></div>
+                <div class="input-group"><label>Format Output</label><select id="format"><option value="original">Sesuai Format Asli</option><option value="image/jpeg">JPG</option><option value="image/png">PNG</option><option value="image/webp">WEBP</option></select></div>
+                <div class="input-group full-width"><label>Kualitas (Auto-Hapus EXIF Data)</label><input type="range" id="quality" min="10" max="100" value="85"><div class="slider-label"><span>Rendah</span><span id="quality-val">85%</span></div></div>
             </div>
-            <div class="input-group"><label for="width">Lebar (px)</label><input type="number" id="width" value="1080"></div>
-            <div class="input-group"><label for="height">Tinggi (px)</label><input type="number" id="height" value="1080"></div>
-            <div class="input-group"><label for="resize-mode">Mode Pemotongan</label><select id="resize-mode"><option value="fit">Fit (Proporsional)</option><option value="crop-square">Crop Square</option><option value="pad">Pad (Bingkai)</option><option value="stretch">Stretch</option></select></div>
-            <div class="input-group"><label for="format">Format Output</label><select id="format"><option value="original">Format Asli</option><option value="image/jpeg">JPG</option><option value="image/png">PNG</option><option value="image/webp">WEBP</option></select></div>
-            <div class="input-group full-width" style="grid-column: span 2;"><label for="quality">Kualitas (Auto-Hapus EXIF)</label><input type="range" id="quality" min="10" max="100" value="85"><div class="slider-label"><span>Kompresi</span><span id="quality-val">85%</span></div></div>
 
-            <div class="section-title">🎨 Visual, Filter & Penamaan</div>
-            <div class="input-group"><label for="bg-color">Warna Bingkai (Pad)</label><input type="color" id="bg-color" value="#ffffff" style="width: 100%; height:38px;"></div>
-            <div class="input-group"><label for="image-filter">Efek Filter</label><select id="image-filter"><option value="none">Normal</option><option value="grayscale">Grayscale</option><option value="sepia">Sepia</option></select></div>
-            <div class="input-group"><label for="naming-mode">Metode Nama File</label><select id="naming-mode"><option value="prefix">Awalan (Prefix)</option><option value="sequence">Urutan Angka</option></select></div>
-            <div class="input-group"><label id="naming-label" for="prefix">Teks Awalan</label><input type="text" id="prefix" value="max_" placeholder="Contoh: hasil_"></div>
+            <div class="accordion-header" onclick="toggleAccordion(this)">
+                <span>🎨 Visual, Warna & Penamaan Berkas</span><span class="accordion-icon">▼</span>
+            </div>
+            <div class="accordion-content">
+                <div class="input-group"><label>Efek Filter Instan</label><select id="image-filter"><option value="none">Normal</option><option value="grayscale">Hitam Putih (B&W)</option><option value="sepia">Sepia (Vintage)</option></select></div>
+                <div class="input-group"><label>Warna Latar (Khusus Mode Pad)</label><input type="color" id="bg-color" value="#ffffff" style="width: 100%; height:40px;"></div>
+                
+                <div class="input-group full-width" style="background:var(--gallery-bg); padding:1rem; border-radius:8px; border:1px solid var(--border-color);">
+                    <label style="color:var(--primary); margin-bottom:0.5rem; font-weight:700;">✨ Color Enhancer (Koreksi Warna)</label>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1.2rem;">
+                        <div>
+                            <label style="font-size:0.75rem;">Brightness</label>
+                            <input type="range" id="adj-bright" min="0" max="200" value="100"><div class="slider-label"><span>Gelap</span><span id="bright-val">100%</span></div>
+                        </div>
+                        <div>
+                            <label style="font-size:0.75rem;">Contrast</label>
+                            <input type="range" id="adj-contrast" min="0" max="200" value="100"><div class="slider-label"><span>Pudar</span><span id="contrast-val">100%</span></div>
+                        </div>
+                        <div class="full-width">
+                            <label style="font-size:0.75rem;">Saturation</label>
+                            <input type="range" id="adj-saturate" min="0" max="200" value="100"><div class="slider-label"><span>Abu-abu</span><span id="saturate-val">100%</span></div>
+                        </div>
+                    </div>
+                </div>
 
-            <div class="section-title">🛡️ Proteksi Watermark</div>
-            <div class="input-group full-width" style="grid-column: span 2;"><label for="watermark-type">Tipe Watermark</label><select id="watermark-type"><option value="none">Tanpa Watermark</option><option value="text">Teks</option><option value="image">Logo (Gambar)</option></select></div>
-            
-            <div class="input-group hidden wm-text-group"><label for="watermark-text">Teks Watermark</label><input type="text" id="watermark-text" placeholder="Contoh: @NamaTokoAnda"></div>
-            <div class="input-group hidden wm-text-group"><label for="watermark-color">Warna & Ukuran</label><div class="color-size-picker"><input type="color" id="watermark-color" value="#ffffff"><input type="number" id="watermark-size" value="32" min="10" max="150" style="width: 100px;"></div></div>
+                <div class="input-group"><label>Mode Penamaan File</label><select id="naming-mode"><option value="prefix">Berdasarkan Nama Asli (Prefix)</option><option value="sequence">Urutan Angka (1, 2, 3...)</option></select></div>
+                <div class="input-group"><label id="naming-label">Teks Awalan</label><input type="text" id="prefix" value="v2_" placeholder="Contoh: final_"></div>
+            </div>
 
-            <div class="input-group hidden wm-image-group"><label for="watermark-logo-input">Pilih Logo (PNG)</label><input type="file" id="watermark-logo-input" accept="image/png, image/webp"></div>
-            <div class="input-group hidden wm-image-group"><label>Skala & Opacity</label><div style="display:flex; flex-direction:column; gap:0.3rem;"><input type="range" id="wm-logo-scale" min="10" max="100" value="50"><div class="slider-label"><span>Skala: <span id="scale-val">50%</span></span></div><input type="range" id="wm-logo-opacity" min="10" max="100" value="80"><div class="slider-label"><span>Opacity: <span id="opacity-val">80%</span></span></div></div></div>
+            <div class="accordion-header" onclick="toggleAccordion(this)">
+                <span>🛡️ Proteksi Watermark Hak Cipta</span><span class="accordion-icon">▼</span>
+            </div>
+            <div class="accordion-content">
+                <div class="input-group full-width"><label>Tipe Watermark</label><select id="watermark-type"><option value="none">Tanpa Watermark</option><option value="text">Teks Khusus</option><option value="image">Logo (Gambar PNG)</option></select></div>
+                
+                <div class="input-group hidden wm-text-group"><label>Teks Watermark</label><input type="text" id="watermark-text" placeholder="Hak Cipta © 2026"></div>
+                <div class="input-group hidden wm-text-group"><label>Warna & Ukuran (px)</label><div class="color-size-picker"><input type="color" id="watermark-color" value="#ffffff"><input type="number" id="watermark-size" value="36" min="10" max="150" style="width: 100px;"></div></div>
 
-            <div class="input-group hidden wm-pos-group full-width" style="grid-column: span 2;"><label for="watermark-pos">Posisi Watermark</label><select id="watermark-pos"><option value="bottom-right">Bawah Kanan</option><option value="bottom-left">Bawah Kiri</option><option value="top-right">Atas Kanan</option><option value="top-left">Atas Kiri</option><option value="center">Tengah Gambar</option></select></div>
+                <div class="input-group hidden wm-image-group"><label>Pilih File Logo</label><input type="file" id="watermark-logo-input" accept="image/png, image/webp"></div>
+                <div class="input-group hidden wm-image-group"><label>Skala & Transparansi (Opacity)</label><div style="display:flex; flex-direction:column; gap:0.5rem;"><input type="range" id="wm-logo-scale" min="10" max="100" value="50"><div class="slider-label"><span>Skala: <span id="scale-val">50%</span></span></div><input type="range" id="wm-logo-opacity" min="10" max="100" value="80"><div class="slider-label"><span>Opacity: <span id="opacity-val">80%</span></span></div></div></div>
+
+                <div class="input-group hidden wm-pos-group full-width"><label>Posisi Penempatan</label><select id="watermark-pos"><option value="bottom-right">Pojok Kanan Bawah</option><option value="bottom-left">Pojok Kiri Bawah</option><option value="top-right">Pojok Kanan Atas</option><option value="top-left">Pojok Kiri Atas</option><option value="center">Tepat di Tengah</option></select></div>
+            </div>
         </div>
 
         <div class="action-area">
-            <div class="input-group"><label for="zip-filename">📁 Nama File Arsip ZIP Output</label><input type="text" id="zip-filename" value="hasil_resizer_max" placeholder="Nama folder download"></div>
-            <button class="btn-primary" id="resize-btn" disabled>Mulai Pemrosesan 🚀</button>
+            <div class="input-group full-width"><label style="font-size:1rem;">📁 Nama File Output Akhir</label><input type="text" id="output-filename" value="hasil_ultimate_v2" placeholder="Nama file (tanpa ekstensi)" style="font-size:1.1rem; padding: 1rem;"></div>
+            <div class="dual-buttons">
+                <button class="btn-primary btn-zip" id="btn-dl-zip" disabled>Unduh ZIP 📦</button>
+                <button class="btn-primary btn-pdf" id="btn-dl-pdf" disabled>Unduh PDF 📄</button>
+            </div>
         </div>
         
         <div class="progress-wrapper" id="progress-wrapper"><div class="progress-fill" id="progress-bar"></div></div>
@@ -178,100 +237,130 @@
         <div class="stats-box" id="stats-box"></div>
     </div>
 
-    <div class="modal-overlay" id="preview-modal">
-        <div class="modal-content"><button class="modal-close" onclick="closeModal()">×</button><div class="modal-title">Live Preview (Hasil Akhir)</div><div id="preview-loading">Memuat...</div><img id="modal-image" src="" alt="Pratinjau Langsung"></div>
-    </div>
-
-    <div class="version-tag">v1.8.0 Max Edition</div>
+    <div class="modal-overlay" id="preview-modal"><div class="modal-content"><button class="modal-close" onclick="closeModal()">×</button><div id="preview-loading">Memproses...</div><img id="modal-image" src="" alt="Preview"></div></div>
+    <div class="version-tag">v2.0 Ultimate Edition</div>
 
     <script>
-        // Theme & Presets logic (Same as v1.7.0)
-        const htmlElement = document.documentElement; htmlElement.setAttribute('data-theme', localStorage.getItem('theme') || 'light');
-        document.getElementById('theme-toggle').textContent = htmlElement.getAttribute('data-theme') === 'dark' ? '☀️ Light Mode' : '🌙 Dark Mode';
-        document.getElementById('theme-toggle').addEventListener('click', () => { const newTheme = htmlElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light'; htmlElement.setAttribute('data-theme', newTheme); localStorage.setItem('theme', newTheme); document.getElementById('theme-toggle').textContent = newTheme === 'dark' ? '☀️ Light Mode' : '🌙 Dark Mode'; });
+        // Accordion
+        function toggleAccordion(element) {
+            const content = element.nextElementSibling; const isActive = element.classList.contains('active');
+            document.querySelectorAll('.accordion-header').forEach(h => h.classList.remove('active'));
+            document.querySelectorAll('.accordion-content').forEach(c => c.classList.remove('active'));
+            if (!isActive) { element.classList.add('active'); content.classList.add('active'); }
+        }
 
-        const presetSelector = document.getElementById('preset-selector');
-        const inputIdsToSave = ['resize-mode', 'format', 'width', 'height', 'quality', 'bg-color', 'image-filter', 'naming-mode', 'prefix', 'watermark-type', 'watermark-text', 'watermark-color', 'watermark-size', 'wm-logo-scale', 'wm-logo-opacity', 'watermark-pos', 'zip-filename'];
-        function loadPresets() { const saved = JSON.parse(localStorage.getItem('resizer_presets')) || {}; presetSelector.innerHTML = '<option value="default">-- Pengaturan Bawaan --</option>'; for (const key in saved) { const opt = document.createElement('option'); opt.value = key; opt.textContent = key; presetSelector.appendChild(opt); } }
-        document.getElementById('btn-save-preset').addEventListener('click', () => { const name = prompt("Nama profil:"); if (!name) return; const config = {}; inputIdsToSave.forEach(id => config[id] = document.getElementById(id).value); const saved = JSON.parse(localStorage.getItem('resizer_presets')) || {}; saved[name] = config; localStorage.setItem('resizer_presets', JSON.stringify(saved)); loadPresets(); presetSelector.value = name; });
-        document.getElementById('btn-delete-preset').addEventListener('click', () => { const name = presetSelector.value; if (name === 'default') return; if (confirm(`Hapus preset "${name}"?`)) { const saved = JSON.parse(localStorage.getItem('resizer_presets')) || {}; delete saved[name]; localStorage.setItem('resizer_presets', JSON.stringify(saved)); loadPresets(); } });
-        presetSelector.addEventListener('change', (e) => { const name = e.target.value; if (name === 'default') return; const saved = JSON.parse(localStorage.getItem('resizer_presets')) || {}; if (saved[name]) { inputIdsToSave.forEach(id => { const el = document.getElementById(id); if (el && saved[name][id] !== undefined) { el.value = saved[name][id]; el.dispatchEvent(new Event('input')); el.dispatchEvent(new Event('change')); } }); } });
-        loadPresets();
+        // Theme
+        const htmlEl = document.documentElement; htmlEl.setAttribute('data-theme', localStorage.getItem('theme') || 'light');
+        document.getElementById('theme-toggle').textContent = htmlEl.getAttribute('data-theme') === 'dark' ? '☀️ Light Mode' : '🌙 Dark Mode';
+        document.getElementById('theme-toggle').addEventListener('click', () => { const nt = htmlEl.getAttribute('data-theme') === 'light' ? 'dark' : 'light'; htmlEl.setAttribute('data-theme', nt); localStorage.setItem('theme', nt); document.getElementById('theme-toggle').textContent = nt === 'dark' ? '☀️ Light Mode' : '🌙 Dark Mode'; });
 
-        // Observers
+        // Inputs Observers
+        window.setRes = function(w, h, m) { document.getElementById('width').value=w; document.getElementById('height').value=h; document.getElementById('resize-mode').value=m; document.querySelectorAll('.accordion-header')[1].click(); };
         document.getElementById('quality').addEventListener('input', e => document.getElementById('quality-val').textContent = `${e.target.value}%`);
         document.getElementById('wm-logo-scale').addEventListener('input', e => document.getElementById('scale-val').textContent = `${e.target.value}%`);
         document.getElementById('wm-logo-opacity').addEventListener('input', e => document.getElementById('opacity-val').textContent = `${e.target.value}%`);
-        document.getElementById('naming-mode').addEventListener('change', e => document.getElementById('naming-label').textContent = e.target.value === 'sequence' ? "Nama Dasar Berkas Urut" : "Teks Awalan");
+        document.getElementById('adj-bright').addEventListener('input', e => document.getElementById('bright-val').textContent = `${e.target.value}%`);
+        document.getElementById('adj-contrast').addEventListener('input', e => document.getElementById('contrast-val').textContent = `${e.target.value}%`);
+        document.getElementById('adj-saturate').addEventListener('input', e => document.getElementById('saturate-val').textContent = `${e.target.value}%`);
+        document.getElementById('naming-mode').addEventListener('change', e => document.getElementById('naming-label').textContent = e.target.value === 'sequence' ? "Teks Awalan Urutan" : "Teks Awalan Nama Asli");
         document.getElementById('watermark-type').addEventListener('change', e => { document.querySelectorAll('.wm-text-group, .wm-image-group, .wm-pos-group').forEach(el => el.classList.add('hidden')); if (e.target.value === 'text') { document.querySelectorAll('.wm-text-group, .wm-pos-group').forEach(el => el.classList.remove('hidden')); } else if (e.target.value === 'image') { document.querySelectorAll('.wm-image-group, .wm-pos-group').forEach(el => el.classList.remove('hidden')); } });
+        
         let loadedLogoImage = null; document.getElementById('watermark-logo-input').addEventListener('change', e => { if (e.target.files[0]) { const img = new Image(); img.onload = () => loadedLogoImage = img; img.src = URL.createObjectURL(e.target.files[0]); } });
 
-        // File System
-        const dropzone = document.getElementById('dropzone'); const fileInput = document.getElementById('file-input'); const previewGallery = document.getElementById('preview-gallery');
-        let selectedFiles = []; let totalOriginalSize = 0;
-        ['dragenter', 'dragover'].forEach(eName => dropzone.addEventListener(eName, e => { e.preventDefault(); dropzone.classList.add('dragover'); }));
-        ['dragleave', 'drop'].forEach(eName => dropzone.addEventListener(eName, e => { e.preventDefault(); dropzone.classList.remove('dragover'); }));
+        // Presets Logic (v2)
+        const presetSel = document.getElementById('preset-selector');
+        const inputIdsToSave = ['resize-mode', 'format', 'width', 'height', 'quality', 'bg-color', 'image-filter', 'adj-bright', 'adj-contrast', 'adj-saturate', 'naming-mode', 'prefix', 'watermark-type', 'watermark-text', 'watermark-color', 'watermark-size', 'wm-logo-scale', 'wm-logo-opacity', 'watermark-pos'];
+        function loadPresets() { const saved = JSON.parse(localStorage.getItem('resizer_presets_ultimate')) || {}; presetSel.innerHTML = '<option value="default">-- Bawaan Aplikasi --</option>'; for (const key in saved) { const opt = document.createElement('option'); opt.value = key; opt.textContent = key; presetSel.appendChild(opt); } }
+        document.getElementById('btn-save-preset').addEventListener('click', () => { const name = prompt("Beri nama profil pengaturan ini:"); if (!name) return; const config = {}; inputIdsToSave.forEach(id => config[id] = document.getElementById(id).value); const saved = JSON.parse(localStorage.getItem('resizer_presets_ultimate')) || {}; saved[name] = config; localStorage.setItem('resizer_presets_ultimate', JSON.stringify(saved)); loadPresets(); presetSel.value = name; });
+        document.getElementById('btn-delete-preset').addEventListener('click', () => { const name = presetSel.value; if (name === 'default') return; if (confirm(`Hapus profil "${name}"?`)) { const saved = JSON.parse(localStorage.getItem('resizer_presets_ultimate')) || {}; delete saved[name]; localStorage.setItem('resizer_presets_ultimate', JSON.stringify(saved)); loadPresets(); } });
+        presetSel.addEventListener('change', e => { const name = e.target.value; if (name === 'default') return; const saved = JSON.parse(localStorage.getItem('resizer_presets_ultimate')) || {}; if (saved[name]) { inputIdsToSave.forEach(id => { const el = document.getElementById(id); if (el && saved[name][id] !== undefined) { el.value = saved[name][id]; el.dispatchEvent(new Event('input')); el.dispatchEvent(new Event('change')); } }); } });
+        loadPresets();
+
+        // Drag & Drop Gallery
+        const dropzone = document.getElementById('dropzone'), fileInput = document.getElementById('file-input'), previewGallery = document.getElementById('preview-gallery');
+        let selectedFiles = []; let totalOrigSize = 0; let draggedIndex = null;
+        
+        ['dragenter', 'dragover'].forEach(e => dropzone.addEventListener(e, ev => { ev.preventDefault(); dropzone.classList.add('dragover'); }));
+        ['dragleave', 'drop'].forEach(e => dropzone.addEventListener(e, ev => { ev.preventDefault(); dropzone.classList.remove('dragover'); }));
         fileInput.addEventListener('change', () => appendFiles(fileInput.files)); dropzone.addEventListener('drop', e => appendFiles(e.dataTransfer.files));
         
         function appendFiles(files) { Array.from(files).forEach(file => { if (!selectedFiles.find(f => f.name === file.name && f.size === file.size)) selectedFiles.push(file); }); renderGallery(); }
         window.removeFile = function(index) { selectedFiles.splice(index, 1); renderGallery(); };
 
         function renderGallery() {
-            previewGallery.innerHTML = ''; totalOriginalSize = 0;
-            const resizeBtn = document.getElementById('resize-btn'); document.getElementById('stats-box').style.display = 'none';
-            if (selectedFiles.length === 0) { document.getElementById('file-count').textContent = `Belum ada gambar terpilih`; resizeBtn.disabled = true; previewGallery.innerHTML = `<p style="grid-column:1/-1; text-align:center; color:var(--text-muted); padding:1.5rem 0;">Pilih gambar untuk melihat pratinjau</p>`; return; }
-            document.getElementById('file-count').textContent = `${selectedFiles.length} file siap diproses`; resizeBtn.disabled = false;
+            previewGallery.innerHTML = ''; totalOrigSize = 0; 
+            const btnZ = document.getElementById('btn-dl-zip'); const btnP = document.getElementById('btn-dl-pdf'); document.getElementById('stats-box').style.display = 'none';
+            if (selectedFiles.length === 0) { document.getElementById('file-count').textContent = `Belum ada gambar`; btnZ.disabled = true; btnP.disabled = true; previewGallery.innerHTML = `<p style="grid-column:1/-1; text-align:center; color:var(--text-muted); padding:2rem 0;">Galeri Pratinjau kosong.</p>`; return; }
+            document.getElementById('file-count').textContent = `${selectedFiles.length} file siap diproses`; btnZ.disabled = false; btnP.disabled = false;
+            
             selectedFiles.forEach((file, index) => {
-                totalOriginalSize += file.size; const objectUrl = URL.createObjectURL(file);
-                const card = document.createElement('div'); card.className = 'preview-card';
+                totalOrigSize += file.size; const objUrl = URL.createObjectURL(file);
+                const card = document.createElement('div'); card.className = 'preview-card'; card.draggable = true;
+                
+                card.addEventListener('dragstart', () => { draggedIndex = index; setTimeout(() => card.classList.add('dragging'), 0); });
+                card.addEventListener('dragend', () => card.classList.remove('dragging'));
+                card.addEventListener('dragover', e => { e.preventDefault(); card.classList.add('drag-over'); });
+                card.addEventListener('dragleave', () => card.classList.remove('drag-over'));
+                card.addEventListener('drop', e => { e.preventDefault(); card.classList.remove('drag-over'); const dropIndex = index; if (draggedIndex === dropIndex || draggedIndex === null) return; const moved = selectedFiles.splice(draggedIndex, 1)[0]; selectedFiles.splice(dropIndex, 0, moved); renderGallery(); });
+
                 card.innerHTML = `
+                    <div class="drag-handle-badge">#${index+1} ✥</div>
                     <div class="action-btns">
-                        <button class="icon-btn btn-preview" onclick="openLivePreview(${index})" title="Preview">👁️</button>
-                        <button class="icon-btn btn-dl" onclick="downloadSingle(${index})" title="Unduh Ini Saja">⬇️</button>
+                        <button class="icon-btn btn-preview" onclick="openLivePreview(${index})" title="Preview Final">👁️</button>
                         <button class="icon-btn btn-remove" onclick="removeFile(${index})" title="Hapus">×</button>
                     </div>
-                    <img src="${objectUrl}" alt="preview" onload="URL.revokeObjectURL(this.src)">
+                    <img src="${objUrl}" alt="preview" onload="URL.revokeObjectURL(this.src)">
                     <div class="file-name">${file.name}</div>
                 `;
                 previewGallery.appendChild(card);
             });
         }
 
-        // Core Image Processing Function (Reusable)
-        function processImage(file, index, maxWidth, maxHeight, mode, outFormat, qualityNum) {
+        // Processing Engine (Outputs Blob AND Base64 DataURL for PDF)
+        function processImage(file, index, maxW, maxH, mode, format, q) {
             return new Promise((resolve) => {
                 const img = new Image();
                 img.onload = () => {
-                    let destWidth = maxWidth, destHeight = maxHeight; let sX = 0, sY = 0, sW = img.width, sH = img.height; let dX = 0, dY = 0, dW = maxWidth, dH = maxHeight;
-                    if (mode === 'fit') { const ratio = Math.min(maxWidth/img.width, maxHeight/img.height); dW = destWidth = img.width*ratio; dH = destHeight = img.height*ratio; }
-                    else if (mode === 'crop-square') { destWidth = destHeight = dW = dH = Math.min(maxWidth, maxHeight); const minSrc = Math.min(img.width, img.height); sX = (img.width-minSrc)/2; sY = (img.height-minSrc)/2; sW = sH = minSrc; }
-                    else if (mode === 'pad') { const ratio = Math.min(maxWidth/img.width, maxHeight/img.height); dW = img.width*ratio; dH = img.height*ratio; dX = (maxWidth-dW)/2; dY = (maxHeight-dH)/2; }
+                    let destW = maxW, destH = maxH; let sX = 0, sY = 0, sW = img.width, sH = img.height; let dX = 0, dY = 0, dW = maxW, dH = maxH;
+                    if (mode === 'fit') { const r = Math.min(maxW/img.width, maxH/img.height); dW = destW = img.width*r; dH = destH = img.height*r; }
+                    else if (mode === 'crop-square') { destW = destH = dW = dH = Math.min(maxW, maxH); const minS = Math.min(img.width, img.height); sX = (img.width-minS)/2; sY = (img.height-minS)/2; sW = sH = minS; }
+                    else if (mode === 'pad') { const r = Math.min(maxW/img.width, maxH/img.height); dW = img.width*r; dH = img.height*r; dX = (maxW-dW)/2; dY = (maxH-dH)/2; }
 
-                    const canvas = document.createElement('canvas'); canvas.width = destWidth; canvas.height = destHeight; const ctx = canvas.getContext('2d');
-                    if (outFormat === 'image/jpeg' || mode === 'pad') { ctx.fillStyle = document.getElementById('bg-color').value; ctx.fillRect(0, 0, destWidth, destHeight); }
-                    const filter = document.getElementById('image-filter').value; if (filter !== 'none') ctx.filter = filter === 'grayscale' ? 'grayscale(100%)' : 'sepia(100%)';
+                    const canvas = document.createElement('canvas'); canvas.width = destW; canvas.height = destH; const ctx = canvas.getContext('2d');
+                    if (format === 'image/jpeg' || mode === 'pad') { ctx.fillStyle = document.getElementById('bg-color').value; ctx.fillRect(0, 0, destW, destH); }
+                    
+                    let filterArr = []; const baseF = document.getElementById('image-filter').value;
+                    if (baseF === 'grayscale') filterArr.push('grayscale(100%)'); else if (baseF === 'sepia') filterArr.push('sepia(100%)');
+                    const br = document.getElementById('adj-bright').value, co = document.getElementById('adj-contrast').value, sa = document.getElementById('adj-saturate').value;
+                    if(br != 100) filterArr.push(`brightness(${br}%)`); if(co != 100) filterArr.push(`contrast(${co}%)`); if(sa != 100) filterArr.push(`saturate(${sa}%)`);
+                    if (filterArr.length > 0) ctx.filter = filterArr.join(' ');
+                    
                     ctx.drawImage(img, sX, sY, sW, sH, dX, dY, dW, dH); ctx.filter = 'none';
 
-                    // Watermark
-                    const wmType = document.getElementById('watermark-type').value; const wmPos = document.getElementById('watermark-pos').value;
+                    // Watermark Application
+                    const wmType = document.getElementById('watermark-type').value, wmPos = document.getElementById('watermark-pos').value;
                     if (wmType === 'text') {
-                        const wmText = document.getElementById('watermark-text').value.trim();
-                        if (wmText) {
-                            const wmSize = parseInt(document.getElementById('watermark-size').value) || 32; ctx.font = `bold ${wmSize}px 'Inter', sans-serif`; ctx.fillStyle = document.getElementById('watermark-color').value; ctx.shadowColor = "rgba(0,0,0,0.45)"; ctx.shadowBlur = 5; ctx.shadowOffsetX = 2; ctx.shadowOffsetY = 2;
-                            const tW = ctx.measureText(wmText).width; let x = 25, y = 25;
-                            if (wmPos === 'bottom-right') { x = destWidth-tW-25; y = destHeight-25; } else if (wmPos === 'bottom-left') { x = 25; y = destHeight-25; } else if (wmPos === 'top-right') { x = destWidth-tW-25; y = wmSize+25; } else if (wmPos === 'top-left') { x = 25; y = wmSize+25; } else if (wmPos === 'center') { x = (destWidth-tW)/2; y = (destHeight+wmSize)/2; }
-                            ctx.fillText(wmText, x, y);
+                        const wmT = document.getElementById('watermark-text').value.trim();
+                        if (wmT) {
+                            const wmS = parseInt(document.getElementById('watermark-size').value) || 36; ctx.font = `bold ${wmS}px 'Inter', sans-serif`; ctx.fillStyle = document.getElementById('watermark-color').value; ctx.shadowColor = "rgba(0,0,0,0.6)"; ctx.shadowBlur = 4; ctx.shadowOffsetX = 2; ctx.shadowOffsetY = 2;
+                            const tW = ctx.measureText(wmT).width; let x = 30, y = 30;
+                            if (wmPos === 'bottom-right') { x = destW-tW-30; y = destH-30; } else if (wmPos === 'bottom-left') { x = 30; y = destH-30; } else if (wmPos === 'top-right') { x = destW-tW-30; y = wmS+30; } else if (wmPos === 'top-left') { x = 30; y = wmS+30; } else if (wmPos === 'center') { x = (destW-tW)/2; y = (destH+wmS)/2; }
+                            ctx.fillText(wmT, x, y);
                         }
                     } else if (wmType === 'image' && loadedLogoImage) {
-                        const scale = parseInt(document.getElementById('wm-logo-scale').value)/100; const op = parseInt(document.getElementById('wm-logo-opacity').value)/100;
-                        const lW = loadedLogoImage.width*scale; const lH = loadedLogoImage.height*scale; let x = 25, y = 25;
-                        if (wmPos === 'bottom-right') { x = destWidth-lW-25; y = destHeight-lH-25; } else if (wmPos === 'bottom-left') { x = 25; y = destHeight-lH-25; } else if (wmPos === 'top-right') { x = destWidth-lW-25; y = 25; } else if (wmPos === 'center') { x = (destWidth-lW)/2; y = (destHeight-lH)/2; }
+                        const sc = parseInt(document.getElementById('wm-logo-scale').value)/100, op = parseInt(document.getElementById('wm-logo-opacity').value)/100;
+                        const lW = loadedLogoImage.width*sc, lH = loadedLogoImage.height*sc; let x = 30, y = 30;
+                        if (wmPos === 'bottom-right') { x = destW-lW-30; y = destH-lH-30; } else if (wmPos === 'bottom-left') { x = 30; y = destH-lH-30; } else if (wmPos === 'top-right') { x = destW-lW-30; y = 30; } else if (wmPos === 'center') { x = (destW-lW)/2; y = (destH-lH)/2; }
                         ctx.globalAlpha = op; ctx.drawImage(loadedLogoImage, x, y, lW, lH); ctx.globalAlpha = 1.0; 
                     }
 
-                    const finalMime = outFormat === 'original' ? file.type : outFormat; let ext = '.jpg'; if (finalMime === 'image/png') ext = '.png'; if (finalMime === 'image/webp') ext = '.webp';
-                    const prefix = document.getElementById('prefix').value; let newFileName = document.getElementById('naming-mode').value === 'sequence' ? `${prefix}-${index + 1}${ext}` : `${prefix}${file.name.replace(/\.[^/.]+$/, "")}${ext}`;
-                    canvas.toBlob(blob => resolve({ name: newFileName, blob: blob }), finalMime, qualityNum); URL.revokeObjectURL(img.src);
+                    const finalMime = format === 'original' ? file.type : format; let ext = '.jpg'; if (finalMime === 'image/png') ext = '.png'; if (finalMime === 'image/webp') ext = '.webp';
+                    const pre = document.getElementById('prefix').value; let nName = document.getElementById('naming-mode').value === 'sequence' ? `${pre}${index + 1}${ext}` : `${pre}${file.name.replace(/\.[^/.]+$/, "")}${ext}`;
+                    
+                    // Return both Blob (for ZIP) and DataURL (for PDF generation)
+                    const dataUrl = canvas.toDataURL(finalMime === 'image/webp' ? 'image/jpeg' : finalMime, q); // jsPDF loves JPEG/PNG
+                    canvas.toBlob(blob => resolve({ name: nName, blob: blob, dataUrl: dataUrl, width: destW, height: destH, mime: finalMime }), finalMime, q); 
+                    URL.revokeObjectURL(img.src);
                 };
                 img.src = URL.createObjectURL(file);
             });
@@ -279,62 +368,99 @@
 
         // Live Preview Modal
         const modal = document.getElementById('preview-modal'); const modalImg = document.getElementById('modal-image');
-        window.openLivePreview = async function(index) {
+        window.openLivePreview = async function(i) {
             modalImg.style.display = 'none'; document.getElementById('preview-loading').style.display = 'block'; modal.classList.add('active');
-            const w = parseInt(document.getElementById('width').value); const h = parseInt(document.getElementById('height').value); const m = document.getElementById('resize-mode').value; const f = document.getElementById('format').value; const q = parseInt(document.getElementById('quality').value)/100;
-            const res = await processImage(selectedFiles[index], index, w, h, m, f, q);
-            modalImg.src = URL.createObjectURL(res.blob); modalImg.onload = () => { document.getElementById('preview-loading').style.display = 'none'; modalImg.style.display = 'block'; };
+            const w=parseInt(document.getElementById('width').value), h=parseInt(document.getElementById('height').value), m=document.getElementById('resize-mode').value, f=document.getElementById('format').value, q=parseInt(document.getElementById('quality').value)/100;
+            const res = await processImage(selectedFiles[i], i, w, h, m, f, q);
+            modalImg.src = res.dataUrl; modalImg.onload = () => { document.getElementById('preview-loading').style.display = 'none'; modalImg.style.display = 'block'; };
         };
         window.closeModal = function() { modal.classList.remove('active'); setTimeout(() => modalImg.src = '', 300); };
         modal.addEventListener('click', e => { if(e.target === modal) closeModal(); });
 
-        // Download Single File
-        window.downloadSingle = async function(index) {
-            const w = parseInt(document.getElementById('width').value); const h = parseInt(document.getElementById('height').value); const m = document.getElementById('resize-mode').value; const f = document.getElementById('format').value; const q = parseInt(document.getElementById('quality').value)/100;
-            const res = await processImage(selectedFiles[index], index, w, h, m, f, q);
-            saveAs(res.blob, res.name);
-        };
+        // Core UI Lock function
+        function lockUI() { document.getElementById('btn-dl-zip').disabled = true; document.getElementById('btn-dl-pdf').disabled = true; document.getElementById('progress-wrapper').style.display = 'block'; document.getElementById('progress-bar').style.width = '0%'; document.getElementById('status').style.color = 'var(--primary)'; }
+        function unlockUI() { document.getElementById('btn-dl-zip').disabled = false; document.getElementById('btn-dl-pdf').disabled = false; setTimeout(() => document.getElementById('progress-wrapper').style.display = 'none', 2000); }
 
-        // Asynchronous Batch Execution
-        document.getElementById('resize-btn').addEventListener('click', async () => {
-            const maxW = parseInt(document.getElementById('width').value); const maxH = parseInt(document.getElementById('height').value);
-            let zipName = document.getElementById('zip-filename').value.trim() || "hasil_resizer_max";
-            if (document.getElementById('watermark-type').value === 'image' && !loadedLogoImage) return alert("Logo Watermark belum dipilih.");
-            if (!maxW || !maxH) return alert("Tentukan nilai dimensi target.");
+        // EXPORT TO ZIP
+        document.getElementById('btn-dl-zip').addEventListener('click', async () => {
+            const maxW=parseInt(document.getElementById('width').value), maxH=parseInt(document.getElementById('height').value);
+            let outName = document.getElementById('output-filename').value.trim() || "hasil_ultimate_v2";
+            if (document.getElementById('watermark-type').value === 'image' && !loadedLogoImage) return alert("Pilih Logo Watermark dahulu.");
+            if (!maxW || !maxH) return alert("Masukkan dimensi dengan benar.");
 
-            const btn = document.getElementById('resize-btn'); btn.disabled = true;
-            const statusDiv = document.getElementById('status'); const progWrap = document.getElementById('progress-wrapper'); const progBar = document.getElementById('progress-bar');
-            progWrap.style.display = 'block'; progBar.style.width = '0%'; statusDiv.style.color = 'var(--primary)';
-            
-            const zip = new JSZip(); const imgFolder = zip.folder(zipName); let totalNewSize = 0;
-            const mode = document.getElementById('resize-mode').value; const format = document.getElementById('format').value; const quality = parseInt(document.getElementById('quality').value)/100;
+            lockUI(); const statusDiv = document.getElementById('status'), progBar = document.getElementById('progress-bar');
+            const zip = new JSZip(), imgFolder = zip.folder(outName); let totalNewSize = 0;
+            const mode=document.getElementById('resize-mode').value, format=document.getElementById('format').value, q=parseInt(document.getElementById('quality').value)/100;
 
             for (let i = 0; i < selectedFiles.length; i++) {
-                statusDiv.textContent = `Memproses (${i + 1}/${selectedFiles.length}): ${selectedFiles[i].name}`;
+                statusDiv.textContent = `Memproses ZIP (${i + 1}/${selectedFiles.length}): ${selectedFiles[i].name}`;
                 progBar.style.width = `${((i) / selectedFiles.length) * 100}%`;
-                
-                // Mencegah Browser Hang (Thread Yielding)
-                await new Promise(resolve => setTimeout(resolve, 20)); 
-                
-                const result = await processImage(selectedFiles[i], i, maxW, maxH, mode, format, quality);
+                await new Promise(res => setTimeout(res, 10)); // Anti-freeze
+                const result = await processImage(selectedFiles[i], i, maxW, maxH, mode, format, q);
                 totalNewSize += result.blob.size; imgFolder.file(result.name, result.blob);
             }
 
-            progBar.style.width = `100%`;
-            statusDiv.textContent = "Sedang membungkus ZIP...";
-            await new Promise(resolve => setTimeout(resolve, 50)); 
-
+            progBar.style.width = `100%`; statusDiv.textContent = "Membangun arsip ZIP...";
             zip.generateAsync({ type: "blob" }).then(content => {
-                saveAs(content, `${zipName}.zip`);
-                statusDiv.textContent = "Unduhan Selesai! ✨"; statusDiv.style.color = "var(--success)"; btn.disabled = false;
-                setTimeout(() => progWrap.style.display = 'none', 2000);
-                
-                const origMB = (totalOriginalSize/1048576).toFixed(2); const newMB = (totalNewSize/1048576).toFixed(2);
-                let pct = (((totalOriginalSize - totalNewSize)/totalOriginalSize)*100).toFixed(1);
-                document.getElementById('stats-box').innerHTML = `Ukuran Asli: <b>${origMB} MB</b> ➔ Baru: <b>${newMB} MB</b> <br>Penghematan Data: <span>${Math.max(0, pct)}%</span>!`;
-                document.getElementById('stats-box').style.display = 'block';
+                saveAs(content, `${outName}.zip`);
+                statusDiv.textContent = "Unduhan ZIP Selesai! 🎉"; statusDiv.style.color = "var(--success)"; unlockUI();
+                showStats(totalNewSize);
             });
         });
+
+        // EXPORT TO SMART PDF
+        document.getElementById('btn-dl-pdf').addEventListener('click', async () => {
+            if (!window.jspdf) return alert("Gagal memuat sistem PDF. Pastikan internet Anda aktif.");
+            const maxW=parseInt(document.getElementById('width').value), maxH=parseInt(document.getElementById('height').value);
+            let outName = document.getElementById('output-filename').value.trim() || "hasil_ultimate_v2";
+            if (document.getElementById('watermark-type').value === 'image' && !loadedLogoImage) return alert("Pilih Logo Watermark dahulu.");
+
+            lockUI(); const statusDiv = document.getElementById('status'), progBar = document.getElementById('progress-bar');
+            const { jsPDF } = window.jspdf; 
+            const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+            
+            // A4 dimensions in mm
+            const a4W = 210, a4H = 297;
+            const mode=document.getElementById('resize-mode').value, format=document.getElementById('format').value, q=parseInt(document.getElementById('quality').value)/100;
+            let totalNewSize = 0; // Estimation
+
+            for (let i = 0; i < selectedFiles.length; i++) {
+                statusDiv.textContent = `Merender Halaman PDF (${i + 1}/${selectedFiles.length})...`;
+                progBar.style.width = `${((i) / selectedFiles.length) * 100}%`;
+                await new Promise(res => setTimeout(res, 10)); 
+                
+                const result = await processImage(selectedFiles[i], i, maxW, maxH, mode, format, q);
+                totalNewSize += result.blob.size; // Estimate
+                
+                // Smart A4 Fit Calculation
+                const imgRatio = result.width / result.height;
+                const a4Ratio = a4W / a4H;
+                let finalW = a4W, finalH = a4H;
+                
+                if (imgRatio > a4Ratio) { finalH = a4W / imgRatio; } else { finalW = a4H * imgRatio; }
+                const xOffset = (a4W - finalW) / 2; const yOffset = (a4H - finalH) / 2;
+
+                if (i > 0) doc.addPage();
+                
+                // Add image (jsPDF requires format 'JPEG' or 'PNG')
+                let pdfImgFormat = result.mime === 'image/png' ? 'PNG' : 'JPEG';
+                doc.addImage(result.dataUrl, pdfImgFormat, xOffset, yOffset, finalW, finalH, undefined, 'FAST');
+            }
+
+            progBar.style.width = `100%`; statusDiv.textContent = "Menyatukan Dokumen PDF...";
+            setTimeout(() => {
+                doc.save(`${outName}.pdf`);
+                statusDiv.textContent = "Dokumen PDF Berhasil Dibuat! 📕"; statusDiv.style.color = "var(--danger)"; unlockUI();
+                showStats(totalNewSize);
+            }, 500);
+        });
+
+        function showStats(totalNewSize) {
+            const origMB = (totalOrigSize/1048576).toFixed(2), newMB = (totalNewSize/1048576).toFixed(2);
+            let pct = (((totalOrigSize - totalNewSize)/totalOrigSize)*100).toFixed(1);
+            document.getElementById('stats-box').innerHTML = `Memori Asli: <b>${origMB} MB</b> ➔ Estimasi Baru: <b>${newMB} MB</b> <br>Penghematan Memori: <span>${Math.max(0, pct)}%</span>`;
+            document.getElementById('stats-box').style.display = 'block';
+        }
     </script>
 </body>
 </html>
