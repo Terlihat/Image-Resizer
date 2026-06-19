@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modern Bulk Image Resizer Ultimate</title>
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+
+    <style>
+        :root {
+            --primary: #4F46E5;
+            --primary-hover: #4338CA;
+            --bg-color: #F3F4F6;
+            --card-bg: #FFFFFF;
+            --text-main: #1F2937;
+            --text-muted: #6B7280;
+            --border-color: #E5E7EB;
+            --input-bg: #FFFFFF;
+            --gallery-bg: #F9FAFB;
+        }
+
+        [data-theme="dark"] {
+            --bg-color: #111827;
+            --card-bg: #1F2937;
+            --text-main: #F9FAFB;
+            --text-muted: #9CA3AF;
+            --border-color: #374151;
+            --input-bg: #374151;
+            --gallery-bg: #111827;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+            transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 2rem 1rem;
+        }
+
+        .header-wrapper {
+            display: flex;
+            justify-content: flex-end;
+            width: 100%;
+            max-width: 850px;
+            margin-bottom: -1rem;
+            z-index: 10;
+        }
+
+        .theme-toggle {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+
+        .container {
+            background: var(--card-bg);
+            max-width: 850px;
+            width: 100%;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+            padding: 2.5rem;
+            margin-top: 1rem;
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        p.subtitle {
+            text-align: center;
+            color: var(--text-muted);
+            margin-bottom: 2.5rem;
+            font-size: 0.95rem;
+        }
+
+        /* Dropzone */
+        .dropzone {
+            border: 2px dashed var(--primary);
+            border-radius: 12px;
+            padding: 2.5rem 2rem;
+            text-align: center;
+            background: rgba(79, 70, 229, 0.03);
+            cursor: pointer;
+            position: relative;
+        }
+
+        .dropzone.dragover {
+            border-color: var(--primary-hover);
+            background: rgba(79, 70, 229, 0.12);
+        }
+
+        .dropzone input[type="file"] {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .dropzone-text {
+            font-weight: 600;
+            color: var(--primary);
+            font-size: 1.1rem;
+        }
+
+        #file-count {
+            display: block;
+            margin-top: 0.5rem;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        /* Preview Gallery */
+        .preview-gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+            gap: 1rem;
+            margin-top: 1.5rem;
+            max-height: 180px;
+            overflow-y: auto;
+            padding: 0.75rem;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            background: var(--gallery-bg);
+        }
+
+        .preview-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 0.25rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .preview-card img {
+            width: 100%;
+            height: 65px;
+            object-fit: cover;
+            border-radius: 6px;
+        }
+
+        .preview-card .file-name {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            text-align: center;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            width: 100%;
+            margin-top: 0.3rem;
+        }
+
+        /* Settings Sections */
+        .section-title {
+            grid-column: span 2;
+            font-size: 1rem;
+            font-weight: 700;
+            margin-top: 1rem;
+            padding-bottom: 0.4rem;
+            border-bottom: 2px solid var(--border-color);
+            color: var(--primary);
+        }
+
+        .settings {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.2rem;
+            margin-top: 2rem;
+            padding-top: 1rem;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .input-group label {
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .input-group input[type="number"],
+        .input-group input[type="text"],
+        .input-group select {
+            padding: 0.7rem;
+            border: 1px solid var(--border-color);
+            background-color: var(--input-bg);
+            color: var(--text-main);
+            border-radius: 8px;
+            font-size: 0.95rem;
+            outline: none;
+        }
+
+        .input-group input:focus, .input-group select:focus {
+            border-color: var(--primary);
+        }
+
+        .color-size-picker {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        .color-size-picker input[type="color"] {
+            border: 1px solid var(--border-color);
+            background: none;
+            width: 50px;
+            height: 38px;
+            padding: 2px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .quality-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        /* Button Styling */
+        .btn {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 1rem 2rem;
+            font-size: 1rem;
+            font-weight: 600;
+            width: 100%;
+            margin-top: 2.5rem;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.2);
+        }
+
+        .btn:hover:not(:disabled) {
+            background-color: var(--primary-hover);
+        }
+
+        .btn:disabled {
+            background-color: var(--text-muted);
+            cursor: not-allowed;
+            opacity: 0.6;
+            box-shadow: none;
+        }
+
+        #status {
+            margin-top: 1.5rem;
+            text-align: center;
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .version-tag {
+            position: fixed;
+            bottom: 1rem;
+            right: 1rem;
+            background: var(--card-bg);
+            padding: 0.3rem 0.6rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            border: 1px solid var(--border-color);
+        }
+        
+        @media (max-width: 600px) {
+            .settings { grid-template-columns: 1fr; }
+            .section-title { grid-column: span 1; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header-wrapper">
+        <button class="theme-toggle" id="theme-toggle">🌙 Dark Mode</button>
+    </div>
+
+    <div class="container">
+        <h1>Bulk Image Resizer Ultimate</h1>
+        <p class="subtitle">Sistem pemroses gambar massal dengan fitur Watermark & Penamaan Kustom.</p>
+
+        <div class="dropzone" id="dropzone">
+            <span class="dropzone-text">Klik atau Tarik Gambar ke Sini</span>
+            <span id="file-count">Belum ada gambar terpilih</span>
+            <input type="file" id="file-input" multiple accept="image/jpeg, image/png, image/webp">
+        </div>
+
+        <div class="preview-gallery" id="preview-gallery">
+            <p style="grid-column: 1/-1; text-align:center; color:var(--text-muted); font-size:0.9rem; padding: 1.5rem 0;">
+                Gambar yang Anda unggah akan muncul di sini
+            </p>
+        </div>
+
+        <div class="settings">
+            
+            <div class="section-title">📐 Pengaturan Dimensi & Format</div>
+            <div class="input-group">
+                <label for="resize-mode">Mode Ukuran (Resize Mode)</label>
+                <select id="resize-mode">
+                    <option value="fit">Fit (Pertahankan Rasio)</option>
+                    <option value="crop-square">Crop to Square (Potong Kotak Tengah)</option>
+                    <option value="stretch">Stretch (Paksa Dimensi)</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <label for="format">Format Output</label>
+                <select id="format">
+                    <option value="original">Sama seperti asli</option>
+                    <option value="image/jpeg">JPG</option>
+                    <option value="image/png">PNG</option>
+                    <option value="image/webp">WEBP</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <label for="width">Lebar Target Utama (px)</label>
+                <input type="number" id="width" value="1080">
+            </div>
+            <div class="input-group">
+                <label for="height">Tinggi Target Utama (px)</label>
+                <input type="number" id="height" value="1080">
+            </div>
+            <div class="input-group" style="grid-column: span 2;">
+                <label for="quality">Kualitas Gambar</label>
+                <input type="range" id="quality" min="10" max="100" value="90">
+                <div class="quality-label">
+                    <span>Kompresi</span>
+                    <span id="quality-val">90%</span>
+                </div>
+            </div>
+
+            <div class="section-title">✏️ Skema Penamaan Berkas</div>
+            <div class="input-group">
+                <label for="naming-mode">Metode Penamaan</label>
+                <select id="naming-mode">
+                    <option value="prefix">Gunakan Awalan (Prefix + Nama Asli)</option>
+                    <option value="sequence">Urutan Angka Otomatis (Nama-1, Nama-2)</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <label id="naming-label" for="prefix">Teks Nama / Awalan File</label>
+                <input type="text" id="prefix" value="resized_" placeholder="Contoh: hasil_">
+            </div>
+
+            <div class="section-title">🛡️ Lapisan Watermark Teks</div>
+            <div class="input-group">
+                <label for="watermark-text">Teks Watermark (Kosongkan jika tidak pakai)</label>
+                <input type="text" id="watermark-text" placeholder="Contoh: @NamaTokoAnda">
+            </div>
+            <div class="input-group">
+                <label for="watermark-pos">Posisi Watermark</label>
+                <select id="watermark-pos">
+                    <option value="bottom-right">Bawah Kanan</option>
+                    <option value="bottom-left">Bawah Kiri</option>
+                    <option value="top-right">Atas Kanan</option>
+                    <option value="top-left">Atas Kiri</option>
+                    <option value="center">Tengah Gambar</option>
+                </select>
+            </div>
+            <div class="input-group" style="grid-column: span 2;">
+                <label for="watermark-color">Warna & Ukuran Font Watermark</label>
+                <div class="color-size-picker">
+                    <input type="color" id="watermark-color" value="#ffffff">
+                    <input type="number" id="watermark-size" value="32" min="10" max="150" style="width: 100px;">
+                    <span style="font-size:0.9rem; color:var(--text-muted)">px</span>
+                </div>
+            </div>
+
+        </div>
+
+        <button class="btn" id="resize-btn" disabled>Mulai Pemrosesan & Unduh (.ZIP)</button>
+        <div id="status"></div>
+    </div>
+
+    <div class="version-tag">v1.3.0</div>
+
+    <script>
+        // --- Dark/Light Mode Switcher ---
+        const themeToggle = document.getElementById('theme-toggle');
+        const htmlElement = document.documentElement;
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        htmlElement.setAttribute('data-theme', savedTheme);
+        themeToggle.textContent = savedTheme === 'dark' ? '☀️ Light Mode' : '🌙 Dark Mode';
+
+        themeToggle.addEventListener('click', () => {
+            const currentTheme = htmlElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            htmlElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            themeToggle.textContent = newTheme === 'dark' ? '☀️ Light Mode' : '🌙 Dark Mode';
+        });
+
+        // --- Quality Slider Tracker ---
+        const qualitySlider = document.getElementById('quality');
+        const qualityVal = document.getElementById('quality-val');
+        qualitySlider.addEventListener('input', (e) => {
+            qualityVal.textContent = `${e.target.value}%`;
+        });
+
+        // --- Dynamic Naming Label Changer ---
+        const namingMode = document.getElementById('naming-mode');
+        const namingLabel = document.getElementById('naming-label');
+        namingMode.addEventListener('change', () => {
+            if(namingMode.value === 'sequence') {
+                namingLabel.textContent = "Nama Dasar Berkas Urut";
+                document.getElementById('prefix').value = "foto_produk";
+            } else {
+                namingLabel.textContent = "Teks Awalan File (Prefix)";
+                document.getElementById('prefix').value = "resized_";
+            }
+        });
+
+        // --- Drag & Drop Visual Effects ---
+        const dropzone = document.getElementById('dropzone');
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropzone.addEventListener(eventName, (e) => { e.preventDefault(); dropzone.classList.add('dragover'); }, false);
+        });
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropzone.addEventListener(eventName, (e) => { e.preventDefault(); dropzone.classList.remove('dragover'); }, false);
+        });
+
+        // --- Core Application Logic ---
+        const fileInput = document.getElementById('file-input');
+        const fileCount = document.getElementById('file-count');
+        const previewGallery = document.getElementById('preview-gallery');
+        const resizeBtn = document.getElementById('resize-btn');
+        const statusDiv = document.getElementById('status');
+        let selectedFiles = [];
+
+        fileInput.addEventListener('change', handleFileSelect);
+        dropzone.addEventListener('drop', (e) => {
+            const dt = e.dataTransfer;
+            if(dt.files.length > 0) {
+                fileInput.files = dt.files;
+                handleFileSelect();
+            }
+        });
+
+        function handleFileSelect() {
+            selectedFiles = Array.from(fileInput.files);
+            previewGallery.innerHTML = '';
+
+            if (selectedFiles.length > 0) {
+                fileCount.textContent = `${selectedFiles.length} file siap diproses`;
+                resizeBtn.disabled = false;
+
+                selectedFiles.forEach(file => {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const card = document.createElement('div');
+                        card.className = 'preview-card';
+                        card.innerHTML = `
+                            <img src="${e.target.result}" alt="preview">
+                            <div class="file-name">${file.name}</div>
+                        `;
+                        previewGallery.appendChild(card);
+                    };
+                    reader.readAsDataURL(file);
+                });
+            } else {
+                fileCount.textContent = `Belum ada gambar terpilih`;
+                resizeBtn.disabled = true;
+                previewGallery.innerHTML = `<p style="grid-column:1/-1; text-align:center; color:var(--text-muted); font-size:0.9rem; padding:1.5rem 0;">Gambar yang Anda unggah akan muncul di sini</p>`;
+            }
+        }
+
+        // Fungsi manipulasi Canvas dengan dukungan Watermarking & Pemrosesan Geometri Terkini
+        function processImage(file, index, maxWidth, maxHeight, mode, outFormat, qualityNum) {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        let srcX = 0, srcY = 0;
+                        let srcWidth = img.width;
+                        let srcHeight = img.height;
+                        let destWidth = maxWidth;
+                        let destHeight = maxHeight;
+
+                        if (mode === 'fit') {
+                            const ratio = Math.min(maxWidth / img.width, maxHeight / img.height);
+                            destWidth = img.width * ratio;
+                            destHeight = img.height * ratio;
+                        } else if (mode === 'crop-square') {
+                            const targetSize = Math.min(maxWidth, maxHeight);
+                            destWidth = targetSize;
+                            destHeight = targetSize;
+                            const minSrc = Math.min(img.width, img.height);
+                            srcX = (img.width - minSrc) / 2;
+                            srcY = (img.height - minSrc) / 2;
+                            srcWidth = minSrc;
+                            srcHeight = minSrc;
+                        }
+
+                        const canvas = document.createElement('canvas');
+                        canvas.width = destWidth;
+                        canvas.height = destHeight;
+                        const ctx = canvas.getContext('2d');
+                        
+                        if (outFormat === 'image/jpeg') {
+                            ctx.fillStyle = '#FFFFFF';
+                            ctx.fillRect(0, 0, destWidth, destHeight);
+                        }
+                        
+                        ctx.drawImage(img, srcX, srcY, srcWidth, srcHeight, 0, 0, destWidth, destHeight);
+                        
+                        // --- SISTEM WATERMARK TEKS ---
+                        const wmText = document.getElementById('watermark-text').value.trim();
+                        if (wmText) {
+                            const wmPos = document.getElementById('watermark-pos').value;
+                            const wmColor = document.getElementById('watermark-color').value;
+                            const wmSize = parseInt(document.getElementById('watermark-size').value) || 32;
+
+                            ctx.font = `bold ${wmSize}px 'Inter', sans-serif`;
+                            ctx.fillStyle = wmColor;
+                            
+                            // Efek bayangan halus agar watermark terbaca di segala latar gambar
+                            ctx.shadowColor = "rgba(0, 0, 0, 0.45)";
+                            ctx.shadowBlur = 5;
+                            ctx.shadowOffsetX = 2;
+                            ctx.shadowOffsetY = 2;
+
+                            const textWidth = ctx.measureText(wmText).width;
+                            let x = 25;
+                            let y = 25;
+
+                            if (wmPos === 'bottom-right') {
+                                x = destWidth - textWidth - 25;
+                                y = destHeight - 25;
+                            } else if (wmPos === 'bottom-left') {
+                                x = 25;
+                                y = destHeight - 25;
+                            } else if (wmPos === 'top-right') {
+                                x = destWidth - textWidth - 25;
+                                y = wmSize + 25;
+                            } else if (wmPos === 'top-left') {
+                                x = 25;
+                                y = wmSize + 25;
+                            } else if (wmPos === 'center') {
+                                x = (destWidth - textWidth) / 2;
+                                y = (destHeight + wmSize) / 2;
+                            }
+
+                            ctx.fillText(wmText, x, y);
+                            
+                            // Reset shadow agar tidak merusak kompresi blob berikutnya
+                            ctx.shadowBlur = 0;
+                            ctx.shadowOffsetX = 0;
+                            ctx.shadowOffsetY = 0;
+                        }
+
+                        // --- SISTEM PENAMAAN FILE ---
+                        const finalMimeType = outFormat === 'original' ? file.type : outFormat;
+                        let ext = '.jpg';
+                        if (finalMimeType === 'image/png') ext = '.png';
+                        if (finalMimeType === 'image/webp') ext = '.webp';
+                        
+                        const textInputVal = document.getElementById('prefix').value;
+                        const namingModeVal = document.getElementById('naming-mode').value;
+                        let newFileName = "";
+
+                        if(namingModeVal === 'sequence') {
+                            newFileName = `${textInputVal}-${index + 1}${ext}`;
+                        } else {
+                            const baseName = file.name.replace(/\.[^/.]+$/, "");
+                            newFileName = `${textInputVal}${baseName}${ext}`;
+                        }
+
+                        canvas.toBlob((blob) => {
+                            resolve({ name: newFileName, blob: blob });
+                        }, finalMimeType, qualityNum); 
+                    };
+                    img.src = event.target.result;
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        // Eksekusi Bulk Proses
+        resizeBtn.addEventListener('click', async () => {
+            const maxWidth = parseInt(document.getElementById('width').value);
+            const maxHeight = parseInt(document.getElementById('height').value);
+            const mode = document.getElementById('resize-mode').value;
+            const format = document.getElementById('format').value;
+            const qualityNum = parseInt(document.getElementById('quality').value) / 100;
+
+            if (!maxWidth || !maxHeight) {
+                alert("Harap tentukan nilai dimensi target.");
+                return;
+            }
+
+            resizeBtn.disabled = true;
+            statusDiv.style.color = 'var(--primary)';
+            const zip = new JSZip();
+            const imgFolder = zip.folder("resizer_ultimate_output");
+
+            for (let i = 0; i < selectedFiles.length; i++) {
+                statusDiv.textContent = `Memproses (${i + 1}/${selectedFiles.length}): ${selectedFiles[i].name}`;
+                const result = await processImage(selectedFiles[i], i, maxWidth, maxHeight, mode, format, qualityNum);
+                imgFolder.file(result.name, result.blob);
+            }
+
+            statusDiv.textContent = "Mengompresi seluruh berkas menjadi berkas .ZIP...";
+            
+            zip.generateAsync({ type: "blob" }).then(function(content) {
+                saveAs(content, "bulk_resizer_ultimate.zip");
+                statusDiv.textContent = "Selesai! Paket ZIP eksklusif Anda telah diunduh.";
+                statusDiv.style.color = "#10B981";
+                resizeBtn.disabled = false;
+            });
+        });
+    </script>
+</body>
+</html>
